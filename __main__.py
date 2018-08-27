@@ -1,16 +1,17 @@
 import pygame
 import math
 import random
+import sys
 
 SCREEN_SIZE = (640, 480)
-MIN = (random.uniform(-50, -10), random.uniform(-50, -10))
-MAX = (random.uniform(10, 50), random.uniform(10, 50))
+MIN = (random.uniform(-1, -10), random.uniform(-1, -10))
+MAX = (random.uniform(1, 10), random.uniform(1, 10))
 
 FONT = None
 SCREEN = None
 
 def f(x):
-    return math.sin(x)
+    return math.sin(x) 
 
 
 def coord_to_pxl(coordinate, min, max):
@@ -37,6 +38,20 @@ def render_text(text, coord, color, alignment=(0,0)):
 
     SCREEN.blit(text, textrect)
 
+def is_zero(coord, range):
+    return math.isclose(coord, 0, abs_tol = range / 10)
+def format_number(coord, range):
+    if range > 10000 or (not is_zero(coord, range) and abs(coord) < 0.001):
+        return "%.0E" % coord
+
+    num_decimals = 0 
+    decimal_iter = abs(coord)
+    while not is_zero(coord, range) and decimal_iter < 1:
+        decimal_iter *= 10 
+        num_decimals += 1
+    return ("%%.%sf" % num_decimals) % coord
+    
+
 
 def main():
     pygame.init()
@@ -62,7 +77,7 @@ def main():
 
             window_x = MAX[0] - MIN[0]
             x_grid_spacing = 1000000000
-            while window_x / x_grid_spacing < 1:
+            while window_x / x_grid_spacing <= 2:
                 x_grid_spacing /= 10
 
             num_lines = int(window_x / x_grid_spacing)
@@ -78,13 +93,14 @@ def main():
                                  (marker_pixel_coord[0], marker_pixel_coord[1] - 10))
 
                 text_coord = (marker_pixel_coord[0], marker_pixel_coord[1] + 5)
-                if x_coord == 0:
+                if is_zero(x_coord, x_grid_spacing):
                     text_coord = (marker_pixel_coord[0] + 10, marker_pixel_coord[1] + 5)
-                render_text("%.0f" % x_coord, text_coord, marker_color, (0.5, 0))
+                
+                render_text(format_number(x_coord, x_grid_spacing), text_coord, marker_color, (0.5, 0))
 
             window_y = MAX[1] - MIN[1]
             y_grid_spacing = 1000000000
-            while window_y / y_grid_spacing < 1:
+            while window_y / y_grid_spacing <= 3:
                 y_grid_spacing /= 10
 
             num_lines = int(window_y / y_grid_spacing)
@@ -99,9 +115,9 @@ def main():
                                  marker_pixel_coord,
                                  (marker_pixel_coord[0] + 10, marker_pixel_coord[1]))
 
-                if y_coord != 0:
+                if not is_zero(y_coord, y_grid_spacing):
                     text_coord = (marker_pixel_coord[0] - 5, marker_pixel_coord[1])
-                    render_text("%.0f" % y_coord, text_coord, marker_color, (1, 0.5))
+                    render_text(format_number(y_coord, y_grid_spacing), text_coord, marker_color, (1, 0.5))
 
             pygame.draw.line(SCREEN, axis_color,
                              coord_to_pxl((0, MIN[1]), MIN, MAX),
@@ -116,7 +132,7 @@ def main():
                 y = f(x)
                 line_coords.append(coord_to_pxl((x, y), MIN, MAX))
 
-            pygame.draw.lines(SCREEN, (255, 255, 255), False, line_coords)
+            pygame.draw.lines(SCREEN, (220, 220, 220), False, line_coords)
             pygame.display.update()
             done_drawing = True
 
