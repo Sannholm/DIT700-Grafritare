@@ -3,26 +3,27 @@ import math
 
 
 SCREEN_SIZE = (640, 480)
-SCALE = 10
 
 def f(x):
-    return math.tan(x) * math.sin(x)
+    return math.sin(x)
 
 
-def coord_to_pxl(coordinate, scale = 10):
-    size_x = int(SCREEN_SIZE[0] / 2 / scale)
-    size_y = int(SCREEN_SIZE[1] / 2 / scale)
-    trans_coord = (coordinate[0] * size_x, coordinate[1] * size_y)
+def coord_to_pxl(coordinate, min, max):
+    x_range = max[0] - min[0];
+    y_range = max[1] - min[1];
+    size_x = int(SCREEN_SIZE[0] / x_range)
+    size_y = int(SCREEN_SIZE[1] / y_range)
+    trans_coord = ((coordinate[0] - min[0]) * size_x, (coordinate[1] - min[1]) * size_y)
 
-    x = int(trans_coord[0] + SCREEN_SIZE[0] / 2)
-    y = int(SCREEN_SIZE[1] / 2- trans_coord[1])
+    x = int(trans_coord[0])
+    y = int(SCREEN_SIZE[1] - trans_coord[1])
     return (x, y)
 
 
-def x_pxl_to_coord(x, scale = 10):
-    trans_x = x - int(SCREEN_SIZE[0] / 2)
-    size_x = int(SCREEN_SIZE[0] / 2 / scale)
-    return trans_x / size_x
+def x_pxl_to_coord(x, min, max):
+    x_range = max - min;
+    trans_x = x + min
+    return (x + min ) * (x_range / SCREEN_SIZE[0])
 
 
 def main():
@@ -39,10 +40,12 @@ def main():
                 running = False
         if not done_drawing:
             line_coords = []
+            min = (0, -5)
+            max = (10, 5)
             for idx in range(SCREEN_SIZE[0]):
-                x = x_pxl_to_coord(idx, SCALE)
+                x = x_pxl_to_coord(idx, min[0], max[0])
                 y = f(x)
-                line_coords.append(coord_to_pxl((x, y)))
+                line_coords.append(coord_to_pxl((x, y), min, max))
 
             pygame.draw.lines(screen, (255, 255, 255), False, line_coords)
             pygame.display.update()
