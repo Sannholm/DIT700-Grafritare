@@ -10,8 +10,13 @@ MAX = (random.uniform(1, 10), random.uniform(1, 10))
 FONT = None
 SCREEN = None
 
-def f(x):
-    return math.sin(x) 
+class Function:
+    def __init__(self, func, color):
+        self.func = func
+        self.color = color
+
+    def __call__(self, x):
+        return self.func(x)
 
 
 def coord_to_pxl(coordinate, min, max):
@@ -50,7 +55,6 @@ def format_number(coord, range):
         decimal_iter *= 10 
         num_decimals += 1
     return ("%%.%sf" % num_decimals) % coord
-    
 
 
 def main():
@@ -63,8 +67,14 @@ def main():
     global SCREEN
     SCREEN = pygame.display.set_mode(SCREEN_SIZE)
 
+    functions = [
+        Function(lambda x: math.sin(x), (255, 0, 0)),
+        Function(lambda x: x**2, (0, 255, 0))
+    ]
+
     running = True
     done_drawing = False
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -126,14 +136,17 @@ def main():
                              coord_to_pxl((MIN[0], 0), MIN, MAX),
                              coord_to_pxl((MAX[0], 0), MIN, MAX))
 
-            line_coords = []
-            for idx in range(SCREEN_SIZE[0]):
-                x = x_pxl_to_coord(idx, MIN[0], MAX[0])
-                y = f(x)
-                line_coords.append(coord_to_pxl((x, y), MIN, MAX))
+            for function in functions:
+                line_coords = []
+                for idx in range(SCREEN_SIZE[0]):
+                    x = x_pxl_to_coord(idx, MIN[0], MAX[0])
+                    y = function(x)
+                    line_coords.append(coord_to_pxl((x, y), MIN, MAX))
 
-            pygame.draw.lines(SCREEN, (220, 220, 220), False, line_coords)
+                pygame.draw.lines(SCREEN, function.color, False, line_coords)
+
             pygame.display.update()
+
             done_drawing = True
 
 
