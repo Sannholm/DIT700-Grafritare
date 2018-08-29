@@ -1,14 +1,77 @@
 import pygame
 import math
 import random
-import sys
+import re
+
+from eval import eval_expr
+
 
 SCREEN_SIZE = (640, 480)
 MIN = (random.uniform(-1, -10), random.uniform(-1, -10))
 MAX = (random.uniform(1, 10), random.uniform(1, 10))
 
+BOX_COLOR_INACTIVE = pygame.Color('lightskyblue3')
+BOX_COLOR_ACTIVE = pygame.Color('dodgerblue2')
 FONT = None
 SCREEN = None
+functions = []
+
+
+# supported operators
+
+
+class InputBox:
+
+    def __init__(self, x, y, w, h, func_color=(0, 255, 0), text='f(x)='):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.color = BOX_COLOR_INACTIVE
+        self.text = text
+        self.txt_surface = FONT.render(text, True, self.color)
+        self.active = False
+        self.func_text = None
+        self.func_color = func_color
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # If the user clicked on the input_box rect.
+            if self.rect.collidepoint(event.pos):
+                # Toggle the active variable.
+                self.active = not self.active
+            else:
+                self.active = False
+            # Change the current color of the input box.
+            self.color = BOX_COLOR_ACTIVE if self.active else BOX_COLOR_INACTIVE
+        if event.type == pygame.KEYDOWN:
+            if self.active:
+                if event.key == pygame.K_RETURN:
+                    self.func_text = re.sub(r'y\s*=\s*|f\s*\(\s*x\s*\)\s*=\s*|\s', '', self.text)
+                    self.active = False
+                    self.color = BOX_COLOR_INACTIVE
+                elif event.key == pygame.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                else:
+                    self.text += event.unicode
+                # Re-render the text.
+                self.txt_surface = FONT.render(self.text, True, self.color)
+
+    def update(self):
+        # Resize the box if the text is too long.
+        width = max(200, self.txt_surface.get_width()+10)
+        self.rect.w = width
+
+    def draw(self, screen):
+        # Blit the text.
+        screen.blit(self.txt_surface, (self.rect.x+5, self.rect.y+5))
+        # Blit the rect.
+        pygame.draw.rect(screen, self.color, self.rect, 2)
+
+    def func(self, x):
+        if self.func_text:
+            # print(re.sub('x', str(x), self.func_text))
+            return eval_expr(re.sub('x', str(x), self.func_text))
+
+    def has_func(self):
+        return bool(self.func_text)
 
 class Function:
     def __init__(self, func, color):
@@ -28,12 +91,13 @@ def coord_to_pxl(coordinate, min, max):
 
     x = trans_coord[0]
     y = SCREEN_SIZE[1] - trans_coord[1]
-    return (x, y)
+    return x, y
 
 
 def x_pxl_to_coord(x, min, max):
     x_range = max - min
     return x * (x_range / SCREEN_SIZE[0]) + min
+
 
 def render_text(text, coord, color, alignment=(0,0)):
     text = FONT.render(text, True, color)
@@ -43,8 +107,11 @@ def render_text(text, coord, color, alignment=(0,0)):
 
     SCREEN.blit(text, textrect)
 
+
 def is_zero(coord, range):
-    return math.isclose(coord, 0, abs_tol = range / 10)
+    return math.isclose(coord, 0, abs_tol=range / 10)
+
+
 def format_number(coord, range):
     if range > 10000 or (not is_zero(coord, range) and abs(coord) < 0.001):
         return "%.0E" % coord
@@ -67,10 +134,10 @@ def main():
     global SCREEN
     SCREEN = pygame.display.set_mode(SCREEN_SIZE)
 
-    functions = [
-        Function(lambda x: math.sin(x), (255, 0, 0)),
-        Function(lambda x: x**2, (0, 255, 0))
-    ]
+    input_box1 = InputBox(0, 0, 140, 32)
+    input_box2 = InputBox(140, 0, 140, 32, func_color=(255, 0, 0))
+    input_box3 = InputBox(280, 0, 140, 32, func_color=(0, 0, 255))
+    input_boxes = [input_box1, input_box2, input_box3]
 
     running = True
     done_drawing = False
@@ -79,7 +146,10 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            for box in input_boxes:
+                box.handle_event(event)
 
+        SCREEN.fill((0, 0, 0))
         if not done_drawing:
             axis_color = (70, 70, 70)
             grid_color = (30, 30, 30)
@@ -136,18 +206,25 @@ def main():
                              coord_to_pxl((MIN[0], 0), MIN, MAX),
                              coord_to_pxl((MAX[0], 0), MIN, MAX))
 
-            for function in functions:
-                line_coords = []
-                for idx in range(SCREEN_SIZE[0]):
-                    x = x_pxl_to_coord(idx, MIN[0], MAX[0])
-                    y = function(x)
-                    line_coords.append(coord_to_pxl((x, y), MIN, MAX))
+            for box in input_boxes:
+                if box.has_func():
+                    line_coords = []
+                    for idx in range(SCREEN_SIZE[0]):
+                        x = x_pxl_to_coord(idx, MIN[0], MAX[0])
+                        y = box.func(x)
+                        line_coords.append(coord_to_pxl((x, y), MIN, MAX))
 
-                pygame.draw.lines(SCREEN, function.color, False, line_coords)
+                    pygame.draw.lines(SCREEN, box.func_color, False, line_coords)
 
+            # done_drawing = True
+            # temp_screen = SCREEN
+            for box in input_boxes:
+                box.draw(SCREEN)
             pygame.display.update()
 
-            done_drawing = True
+
+
+
 
 
 
