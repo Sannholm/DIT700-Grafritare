@@ -4,3 +4,5 @@ sin(x + time)
 0.1*x*x
 255 0 0
 1/((x-sin(time/2))*(x+sin(time)*5))
+0 0 120
+x*cos(time)+sin(time)
