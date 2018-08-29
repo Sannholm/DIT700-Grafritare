@@ -10,20 +10,17 @@ SCREEN_SIZE = (640, 480)
 MIN = (random.uniform(-5, -10), random.uniform(-5, -10))
 MAX = (random.uniform(5, 10), random.uniform(5, 10))
 
-BOX_COLOR_INACTIVE = pygame.Color('lightskyblue3')
-BOX_COLOR_ACTIVE = pygame.Color('dodgerblue2')
 FONT = None
 SCREEN = None
 functions = []
 
 
-# supported operators
-
-
 class InputBox:
     def __init__(self, x, y, w, h, func_color=(0, 255, 0), text='f(x)='):
         self.rect = pygame.Rect(x, y, w, h)
-        self.color = BOX_COLOR_INACTIVE
+        self.color_active = func_color
+        self.color_inactive = [x//2 for x in func_color]
+        self.color = self.color_inactive
         self.text = text
         self.txt_surface = FONT.render(text, True, self.color)
         self.active = False
@@ -39,13 +36,13 @@ class InputBox:
             else:
                 self.active = False
             # Change the current color of the input box.
-            self.color = BOX_COLOR_ACTIVE if self.active else BOX_COLOR_INACTIVE
+            self.color = self.color_active if self.active else self.color_inactive
         if event.type == pygame.KEYDOWN:
             if self.active:
                 if event.key == pygame.K_RETURN:
                     self.func_text = re.sub(r'y\s*=\s*|f\s*\(\s*x\s*\)\s*=\s*|\s', '', self.text)
                     self.active = False
-                    self.color = BOX_COLOR_INACTIVE
+                    self.color = self.color_inactive
                 elif event.key == pygame.K_BACKSPACE:
                     self.text = self.text[:-1]
                 else:
@@ -129,9 +126,11 @@ def dict_from_module(module):
 
     return context
 
+
 # We need to create the lambda in a separate function to isolate the scope from the iteration loop below
 def create_eval_lambda(func_line):
     return lambda vars: eval(func_line, dict_from_module(math), vars)
+
 
 def load_functions_from_file(path):
     functions = []
@@ -155,6 +154,7 @@ def load_functions_from_file(path):
 
     return functions
 
+
 def main():
     pygame.init()
 
@@ -169,9 +169,9 @@ def main():
 
     functions = []
 
-    input_box1 = InputBox(0, 0, 140, 32)
-    input_box2 = InputBox(140, 0, 140, 32, func_color=(255, 0, 0))
-    input_box3 = InputBox(280, 0, 140, 32, func_color=(0, 0, 255))
+    input_box1 = InputBox(0, 0, 140, 32, func_color=(255, 123, 0))
+    input_box2 = InputBox(140, 0, 140, 32, func_color=(229, 255, 0))
+    input_box3 = InputBox(280, 0, 140, 32, func_color=(255, 0, 250))
     input_boxes = [input_box1, input_box2, input_box3]
 
     running = True
@@ -229,24 +229,24 @@ def main():
         for y in range(1, num_lines + 1):
             y_coord = MIN[1] + y * y_grid_spacing - MIN[1] % y_grid_spacing
             pygame.draw.line(SCREEN, grid_color,
-                            coord_to_pxl((MIN[0], y_coord), MIN, MAX),
-                            coord_to_pxl((MAX[0], y_coord), MIN, MAX))
+                             coord_to_pxl((MIN[0], y_coord), MIN, MAX),
+                             coord_to_pxl((MAX[0], y_coord), MIN, MAX))
 
             marker_pixel_coord = coord_to_pxl((0, y_coord), MIN, MAX)
             pygame.draw.line(SCREEN, marker_color,
-                            marker_pixel_coord,
-                            (marker_pixel_coord[0] + 10, marker_pixel_coord[1]))
+                             marker_pixel_coord,
+                             (marker_pixel_coord[0] + 10, marker_pixel_coord[1]))
 
             if not is_zero(y_coord, y_grid_spacing):
                 text_coord = (marker_pixel_coord[0] - 5, marker_pixel_coord[1])
                 render_text(format_number(y_coord, y_grid_spacing), text_coord, marker_color, (1, 0.5))
 
         pygame.draw.line(SCREEN, axis_color,
-                        coord_to_pxl((0, MIN[1]), MIN, MAX),
-                        coord_to_pxl((0, MAX[1]), MIN, MAX))
+                         coord_to_pxl((0, MIN[1]), MIN, MAX),
+                         coord_to_pxl((0, MAX[1]), MIN, MAX))
         pygame.draw.line(SCREEN, axis_color,
-                        coord_to_pxl((MIN[0], 0), MIN, MAX),
-                        coord_to_pxl((MAX[0], 0), MIN, MAX))
+                         coord_to_pxl((MIN[0], 0), MIN, MAX),
+                         coord_to_pxl((MAX[0], 0), MIN, MAX))
 
         for function in functions + list(filter(lambda box: box.has_func(), input_boxes)):
             line_coords = []
@@ -261,13 +261,6 @@ def main():
             box.draw(SCREEN)
 
         pygame.display.update()
-
-        frame_number += 1
-
-
-
-
-
 
         frame_number += 1
 
