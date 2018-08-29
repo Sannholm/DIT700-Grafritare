@@ -56,6 +56,38 @@ def format_number(coord, range):
         num_decimals += 1
     return ("%%.%sf" % num_decimals) % coord
 
+def dict_from_module(module):
+    context = {}
+    for attr in dir(module):
+        context[attr] = getattr(module, attr)
+
+    return context
+
+# We need to create the lambda in a separate function to isolate the scope from the iteration loop below
+def create_eval_lambda(func_line):
+    return lambda vars: eval(func_line, dict_from_module(math), vars) 
+
+def load_functions_from_file(path):
+    functions = []
+    with open(path, "r") as file:
+        lines = file.readlines()
+        if len(lines) % 2 != 0:
+            raise Exception("Uneven number of lines in file %d", len(lines))
+        for n in range(0, len(lines), 2):
+            try:
+                color_line = lines[n]
+                colors = color_line.split()
+                if len(colors) != 3:
+                    raise Exception("Color format should be 255 255 255")
+                color_arr = list(map(lambda color_str: int(color_str), colors))
+                func_line = lines[n + 1]
+                func_closure = create_eval_lambda(func_line)
+                test_result = func_closure({ "x": 0.0, "time": pygame.time.get_ticks() / 1000.0 })
+                functions.append(Function(func_closure, color_arr))
+            except Exception as error:
+                print("Function " + lines[n + 1] + " error: " + str(error))
+
+    return functions
 
 def main():
     pygame.init()
@@ -67,10 +99,9 @@ def main():
     global SCREEN
     SCREEN = pygame.display.set_mode(SCREEN_SIZE)
 
-    functions = [
-        Function(lambda x: math.sin(x), (255, 0, 0)),
-        Function(lambda x: x**2, (0, 255, 0))
-    ]
+    file_path = "functions.txt"
+
+    functions = []
 
     running = True
     done_drawing = False
@@ -80,7 +111,13 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
+        try:
+            functions = load_functions_from_file(file_path)
+            done_drawing = False
+        except Exception as error:
+            print(error)
         if not done_drawing:
+            SCREEN.fill((0,0,0))
             axis_color = (70, 70, 70)
             grid_color = (30, 30, 30)
             marker_color = (70, 70, 70)
@@ -94,13 +131,13 @@ def main():
             for x in range(1, num_lines + 1):
                 x_coord = MIN[0] + x * x_grid_spacing - MIN[0] % x_grid_spacing
                 pygame.draw.line(SCREEN, grid_color,
-                                 coord_to_pxl((x_coord, MIN[1]), MIN, MAX),
-                                 coord_to_pxl((x_coord, MAX[1]), MIN, MAX))
+                                coord_to_pxl((x_coord, MIN[1]), MIN, MAX),
+                                coord_to_pxl((x_coord, MAX[1]), MIN, MAX))
 
                 marker_pixel_coord = coord_to_pxl((x_coord, 0), MIN, MAX)
                 pygame.draw.line(SCREEN, marker_color,
-                                 marker_pixel_coord,
-                                 (marker_pixel_coord[0], marker_pixel_coord[1] - 10))
+                                marker_pixel_coord,
+                                (marker_pixel_coord[0], marker_pixel_coord[1] - 10))
 
                 text_coord = (marker_pixel_coord[0], marker_pixel_coord[1] + 5)
                 if is_zero(x_coord, x_grid_spacing):
@@ -117,30 +154,30 @@ def main():
             for y in range(1, num_lines + 1):
                 y_coord = MIN[1] + y * y_grid_spacing - MIN[1] % y_grid_spacing
                 pygame.draw.line(SCREEN, grid_color,
-                                 coord_to_pxl((MIN[0], y_coord), MIN, MAX),
-                                 coord_to_pxl((MAX[0], y_coord), MIN, MAX))
+                                coord_to_pxl((MIN[0], y_coord), MIN, MAX),
+                                coord_to_pxl((MAX[0], y_coord), MIN, MAX))
 
                 marker_pixel_coord = coord_to_pxl((0, y_coord), MIN, MAX)
                 pygame.draw.line(SCREEN, marker_color,
-                                 marker_pixel_coord,
-                                 (marker_pixel_coord[0] + 10, marker_pixel_coord[1]))
+                                marker_pixel_coord,
+                                (marker_pixel_coord[0] + 10, marker_pixel_coord[1]))
 
                 if not is_zero(y_coord, y_grid_spacing):
                     text_coord = (marker_pixel_coord[0] - 5, marker_pixel_coord[1])
                     render_text(format_number(y_coord, y_grid_spacing), text_coord, marker_color, (1, 0.5))
 
             pygame.draw.line(SCREEN, axis_color,
-                             coord_to_pxl((0, MIN[1]), MIN, MAX),
-                             coord_to_pxl((0, MAX[1]), MIN, MAX))
+                            coord_to_pxl((0, MIN[1]), MIN, MAX),
+                            coord_to_pxl((0, MAX[1]), MIN, MAX))
             pygame.draw.line(SCREEN, axis_color,
-                             coord_to_pxl((MIN[0], 0), MIN, MAX),
-                             coord_to_pxl((MAX[0], 0), MIN, MAX))
+                            coord_to_pxl((MIN[0], 0), MIN, MAX),
+                            coord_to_pxl((MAX[0], 0), MIN, MAX))
 
             for function in functions:
                 line_coords = []
                 for idx in range(SCREEN_SIZE[0]):
                     x = x_pxl_to_coord(idx, MIN[0], MAX[0])
-                    y = function(x)
+                    y = function({ "x": x, "time": pygame.time.get_ticks() / 1000.0 })
                     line_coords.append(coord_to_pxl((x, y), MIN, MAX))
 
                 pygame.draw.lines(SCREEN, function.color, False, line_coords)
