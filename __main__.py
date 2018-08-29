@@ -21,7 +21,6 @@ functions = []
 
 
 class InputBox:
-
     def __init__(self, x, y, w, h, func_color=(0, 255, 0), text='f(x)='):
         self.rect = pygame.Rect(x, y, w, h)
         self.color = BOX_COLOR_INACTIVE
@@ -65,10 +64,10 @@ class InputBox:
         # Blit the rect.
         pygame.draw.rect(screen, self.color, self.rect, 2)
 
-    def func(self, x):
+    def __call__(self, x):
         if self.func_text:
             # print(re.sub('x', str(x), self.func_text))
-            return eval_expr(re.sub('x', str(x), self.func_text))
+            return eval_expr(re.sub('x', str(x['x']), self.func_text))
 
     def has_func(self):
         return bool(self.func_text)
@@ -76,7 +75,7 @@ class InputBox:
 class Function:
     def __init__(self, func, color):
         self.func = func
-        self.color = color
+        self.func_color = color
 
     def __call__(self, x):
         return self.func(x)
@@ -187,10 +186,6 @@ def main():
                 box.handle_event(event)
 
         SCREEN.fill((0, 0, 0))
-        if not done_drawing:
-            axis_color = (70, 70, 70)
-            grid_color = (30, 30, 30)
-            marker_color = (70, 70, 70)
         if frame_number % 30 == 0:
             try:
                 functions = load_functions_from_file(file_path)
@@ -253,24 +248,14 @@ def main():
                         coord_to_pxl((MIN[0], 0), MIN, MAX),
                         coord_to_pxl((MAX[0], 0), MIN, MAX))
 
-        for box in input_boxes:
-            if box.has_func():
-                line_coords = []
-                for idx in range(SCREEN_SIZE[0]):
-                    x = x_pxl_to_coord(idx, MIN[0], MAX[0])
-                    y = box.func(x)
-                    line_coords.append(coord_to_pxl((x, y), MIN, MAX))
-
-                pygame.draw.lines(SCREEN, box.func_color, False, line_coords)
-
-        for function in functions:
+        for function in functions + list(filter(lambda box: box.has_func(), input_boxes)):
             line_coords = []
             for idx in range(SCREEN_SIZE[0]):
                 x = x_pxl_to_coord(idx, MIN[0], MAX[0])
                 y = function({"x": x, "time": pygame.time.get_ticks() / 1000.0})
                 line_coords.append(coord_to_pxl((x, y), MIN, MAX))
 
-            pygame.draw.lines(SCREEN, function.color, False, line_coords)
+            pygame.draw.lines(SCREEN, function.func_color, False, line_coords)
 
         for box in input_boxes:
             box.draw(SCREEN)
