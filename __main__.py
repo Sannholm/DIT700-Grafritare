@@ -61,15 +61,15 @@ class InputBox:
         # Blit the rect.
         pygame.draw.rect(screen, self.color, self.rect, 2)
 
-    def __call__(self, x):
+    def __call__(self, x, time):
         if self.func_text:
             # print(re.sub('x', str(x), self.func_text))
-            return eval_expr(re.sub('x', str(x['x']), self.func_text))
+            return eval_expr(re.sub('x', str(x), self.func_text))
 
     def has_func(self):
         valid = False
         try:
-            self({"x": 0.0})
+            self(0.0, 0.0)
             valid = True
         except Exception as e:
             pass
@@ -81,8 +81,8 @@ class Function:
         self.func = func
         self.func_color = color
 
-    def __call__(self, x):
-        return self.func(x)
+    def __call__(self, x, time):
+        return self.func(x, time)
 
 
 def coord_to_pxl(coordinate, min, max):
@@ -136,7 +136,7 @@ def dict_from_module(module):
 
 # We need to create the lambda in a separate function to isolate the scope from the iteration loop below
 def create_eval_lambda(func_line):
-    return lambda vars: eval(func_line, dict_from_module(math), vars)
+    return eval("lambda x, time: " + func_line, dict_from_module(math))
 
 
 def load_functions_from_file(path):
@@ -154,7 +154,7 @@ def load_functions_from_file(path):
                 color_arr = list(map(lambda color_str: int(color_str), colors))
                 func_line = lines[n + 1]
                 func_closure = create_eval_lambda(func_line)
-                test_result = func_closure({ "x": 0.0, "time": pygame.time.get_ticks() / 1000.0 })
+                test_result = func_closure(0.0, pygame.time.get_ticks() / 1000.0)
                 functions.append(Function(func_closure, color_arr))
             except Exception as error:
                 print("Function " + lines[n + 1] + " error: " + str(error))
@@ -259,7 +259,7 @@ def main():
             line_coords = []
             for idx in range(SCREEN_SIZE[0]):
                 x = x_pxl_to_coord(idx, MIN[0], MAX[0])
-                y = function({"x": x, "time": pygame.time.get_ticks() / 1000.0})
+                y = function(x, pygame.time.get_ticks() / 1000.0)
                 line_coords.append(coord_to_pxl((x, y), MIN, MAX))
 
             pygame.draw.lines(SCREEN, function.func_color, False, line_coords)
