@@ -67,7 +67,14 @@ class InputBox:
             return eval_expr(re.sub('x', str(x['x']), self.func_text))
 
     def has_func(self):
-        return bool(self.func_text)
+        valid = False
+        try:
+            self({"x": 0.0})
+            valid = True
+        except Exception as e:
+            pass
+
+        return valid and bool(self.func_text)
 
 class Function:
     def __init__(self, func, color):
